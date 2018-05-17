@@ -31,19 +31,45 @@ class Ensmbl(object):
 		doc: http://grch37.rest.ensembl.org/documentation/info/xref_id
 		"""
 		ext = "/xrefs/id/"+gene+"?"+"external_db=EntrezGene;all_levels=1"
-		r = requests.get(self._url+ext, headers={ "Content-Type" : "application/json"})
+		try:
+			r = requests.get(self._url+ext, headers={ "Content-Type" : "application/json"})
+		except Exception:
+			print r.status_code
+			time.sleep(240)
+			r = requests.get(self._url+ext, headers={ "Content-Type" : "application/json"})
+		
+		if r.status_code != 200:
+			print r.status_code
+			time.sleep(240)
+			r = requests.get(self._url+ext, headers={ "Content-Type" : "application/json"})
+		
 		data = str(r.text)
 		data = json.loads(data)
-		# print data
-		entrez_id = data[u"primary_id"]
+		if len(data) == 1:
+			data = data[0]
+			entrez_id = data[u"primary_id"]
+		elif len(data) > 1:
+			entrez_id  = "more than one entrez"
+		else:
+			entrez_id = "N/A"
+
 		return str(entrez_id)
 
 
 def main():
 	# init 
-	en = Ensmbl()
-	entrez_id = en._retrieve_entrez_id("ENSG00000198795")
+	f = "./test_all_genes.csv"
+	table = pd.read_table(f, sep=",")
+	ensg = table.ensg.tolist()
+	entrez_id = {}
+	for i in ensg:
+		en = Ensmbl()
+		entrez = en._retrieve_entrez_id(i)
+		print entrez
+		entrez_id[i] = entrez
 
+	id_convert = pd.DataFrame(entrez_id)
+	id_convert.to_csv("id_convert.csv", sep=",", index=False)
 
 if __name__ == '__main__':
 	main()

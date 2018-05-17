@@ -16,7 +16,6 @@ class genomeCrispr(object):
 		"""
 		send request to server - grep 
 		"""
-
 		try:
 			r = requests.post(self._url, data = {'query':ensg})
 		except Exception:
@@ -60,6 +59,7 @@ def read_file(db):
 	
 	return list(genes)
 
+
 def read_names(ensg):
 
 	names = pd.read_table(ensg, sep=",")
@@ -67,7 +67,8 @@ def read_names(ensg):
 
 	return ensg
 
-def convert(df, ensg, combined):
+
+def convert_crispr(df, ensg, combined):
 	"""
 	conver the dataframe to dictionary with ensg as key and merge all the entries
 	"""
@@ -95,6 +96,7 @@ def test_gene_name(csv_f, gene_name):
 	print len(l[0])
 	print len(l[1])
 
+
 def main():
 	db = "./GenomeCRISPR_full05112017.csv"
 	ensg = "./en_names.csv"
@@ -119,7 +121,7 @@ def main():
 			gene_sum = gC._grep_gene(gene)
 			# gene_sum.to_csv('test_all_genes.csv', mode='a', header=False, index=False)
 			if not gene_sum.empty:
-				combined = convert(gene_sum, gene, combined)
+				combined = convert_crispr(gene_sum, gene, combined)
 
 		df = pd.DataFrame.from_dict(combined, orient='index')
 		df["ensg"] = df.index
