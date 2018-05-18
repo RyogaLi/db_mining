@@ -34,13 +34,13 @@ class Ensmbl(object):
 		try:
 			r = requests.get(self._url+ext, headers={ "Content-Type" : "application/json"})
 		except Exception:
-			print r.status_code
-			time.sleep(240)
+			print "Exception:" + str(r.status_code)
+			time.sleep(60)
 			r = requests.get(self._url+ext, headers={ "Content-Type" : "application/json"})
 		
 		if r.status_code != 200:
-			print r.status_code
-			time.sleep(240)
+			print "Exception:" + str(r.status_code)
+			time.sleep(60)
 			r = requests.get(self._url+ext, headers={ "Content-Type" : "application/json"})
 		
 		data = str(r.text)
@@ -62,14 +62,21 @@ def main():
 	table = pd.read_table(f, sep=",")
 	ensg = table.ensg.tolist()
 	entrez_id = {}
+	start = time.time()
 	for i in ensg:
 		en = Ensmbl()
-		entrez = en._retrieve_entrez_id(i)
-		print entrez
+		try:
+			entrez = en._retrieve_entrez_id(i)
+		except Exception:
+			entrez = "failed"
+
 		entrez_id[i] = entrez
 
-	id_convert = pd.DataFrame(entrez_id)
-	id_convert.to_csv("id_convert.csv", sep=",", index=False)
+	end = time.time()
+	print "processing time:" + str(end - start)
+
+	id_convert = pd.DataFrame(entrez_id.items())
+	id_convert.to_csv("id_convert.csv", index=False)
 
 if __name__ == '__main__':
 	main()
