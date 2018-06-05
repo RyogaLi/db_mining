@@ -54,25 +54,34 @@ class genomeRNA(object):
 		"""
 		colnames = ["StableId", "Screen title", "PubmedId", "geneId", "Assay", "Biomodel",
 			"ReagentId", "Scoretype", "Score_cutoff", "Score", "Phenotype", "Comment"]
-		print len(colnames)
 		param = "{%22findBy%22:{%22entrezId%22:"+gene+"},%22findIsRegex%22:{},%22findRegexParams%22:{},%22findOptions%22:{%22skip%22:0,%22limit%22:5000,%22sort%22:{%22screenTitle%22:1}},%22draw%22:2}"
 		r = requests.get(self._url_phenotype+param)
-		data = r.text.encode('ascii', "ignore")
+		if r.status_code != 200:
+			print "Exception:" + str(r.status_code)
+			time.sleep(60)
+			r = requests.get(self._url_phenotype+param)
+		
+		data = r.text.encode('ascii', "xmlcharrefreplace")
 		data = json.loads(data)
 		col = pd.DataFrame(data).data
 
 		# convert output to pd.DataFrame and select useful info
 		summary_df = pd.DataFrame(col.tolist(), index=col.index, columns= colnames)
+		# drop none
+		# drop no effect
 		summary_not_none = summary_df[summary_df.Phenotype != "none"]
+		# print summary_not_none
+		summary_not_none = summary_not_none[summary_not_none.Phenotype != "no effect"]
 		summary_not_none['geneId'] = summary_not_none.geneId.apply(''.join)
-		summary_w_ID = summary_not_none[summary_not_none.geneId == gene]
+		# summary_w_ID = summary_not_none[summary_not_none.geneId == gene]
 		
-		self._sum_filtered = summary_w_ID[["StableId", "PubmedId", "Assay", "Biomodel", "Phenotype"]]
-		self._sum_filtered.PubmedId = self._sum_filtered.PubmedId.apply(str)
-		
+		self._sum_filtered = summary_not_none[["StableId", "PubmedId", "Assay", "Biomodel", "Phenotype"]]
+		self._sum_filtered.PubmedId = self._sum_filtered.PubmedId.apply(str).fillna("N/A")
+		# self._sum_filtered.PubmedId = self._sum_filtered.PubmedId.str.replace(" ", "N/A")
+		# print self._sum_filtered
 		return self._sum_filtered
 
-	def _convert_df(self, gene):
+	def _convert_df(self):
 		# convert self._sum_filtered to dictionary 
 		# with gene name as key
 		d = {}
@@ -82,18 +91,38 @@ class genomeRNA(object):
 		assay = " | ".join(self._sum_filtered.Assay.tolist())
 		biomodel = " | ".join(self._sum_filtered.Biomodel.tolist())
 		phenotype = " | ".join(self._sum_filtered.Phenotype.tolist())
-		d[gene] = {"KD_StableId": str(stableId), "KD_pubmed": pubmed, "KD_assay": str(assay), "KD_bioModel": str(biomodel), "Phenotype": str(phenotype)}
+		d = {"KD_StableId": str(stableId), "KD_pubmed": pubmed, "KD_assay": str(assay), "KD_bioModel": str(biomodel), "Phenotype": str(phenotype)}
 		
 		return d
 
+
 def main():
-	# init
+	table = pd.read_table(summary_file, sep="\t")
+	entrez_id = table.entrez.tolist()
+	KD_d = {}
+	for gene in entrez_id:
+		# init
+		rnai = genomeRNA()
+
+		tmp_sum = rnai._get_phenotype(str(gene))
+		KD_d[gene] = rnai._convert_df()
+		# print gene
+	df = pd.DataFrame.from_dict(KD_d, orient="index")
+	df.to_csv("rnai_different_id.csv")
+
+def test_one_gene(gene):
 	rnai = genomeRNA()
-	# rnai._get_experiment("GR00231-A")
-	rnai._get_phenotype("673")
-	print rnai._convert_df("673")
+	tmp_sum = rnai._get_phenotype(str(gene))
+	print rnai._convert_df()
+
 
 if __name__ == '__main__':
 	# main()
 	f = "./GenomeRNAi_v17_Homo_sapiens.txt"
+	summary_file = "genome_crispr.txt"
 	main()
+
+	# test
+	# test_one_gene("19")
+
+

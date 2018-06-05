@@ -135,10 +135,12 @@ def main():
 		bn +=1
 
 def test_main():
-	csv_f = "./test_all_genes.csv"
-	gene_name = "ZNHIT2"
-	test_gene_name(csv_f, gene_name)
-
+	# csv_f = "./test_all_genes.csv"
+	# gene_name = "ZNHIT2"
+	# test_gene_name(csv_f, gene_name)
+	gC = genomeCrispr()
+	gene_sum = gC._grep_gene("ENSG00000100583")
+	print gene_sum.symbol
 
 if __name__ == '__main__':
 	test_main()
